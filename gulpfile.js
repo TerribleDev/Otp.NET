@@ -1,52 +1,51 @@
-﻿var p = require('./package.json'),
-    gulp = require('gulp'),
-    assemblyInfo = require('gulp-dotnet-assembly-info'),
-    xmlpoke = require('gulp-xmlpoke'),
-    msbuild = require('gulp-msbuild'),
-    nuget = require('nuget-runner')({
-        apiKey: process.env.NUGET_API_KEY,
-        nugetPath: '.nuget/nuget.exe'
-    });
+﻿var p = require('./package.json');
+var gulp = require('gulp');
+var configuration = process.env.BUILD_CONFIGURATION || 'Release';
+var {restore, build, test, pack, push} = require('gulp-dotnet-cli');
 
 gulp.task('default', ['nuget']);
 
-gulp.task('restore', [], function () {
-    return nuget
-        .restore({
-            packages: 'Otp.NET.sln',
-            verbosity: 'normal'
-        });
-});
+gulp.task('restore', [], ()=>{
 
-gulp.task('build', ['restore'], function () {
-    return gulp
-        .src('Otp.NET.sln')
-        .pipe(msbuild({
-            toolsVersion: 14.0,
-            targets: ['Clean', 'Build'],
-            errorOnFail: true,
-            configuration: 'Release'
-        }));
-});
+    return gulp.src('**/*.sln')
+               .pipe(restore());
 
-gulp.task('nuspec', ['build'], function () {
-    return gulp
-        .src('Otp.NET.nuspec')
-        .pipe(xmlpoke({
-            replacements: [{
-                xpath: "//package:version",
-                namespaces: { "package": "http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd" },
-                value: p.version
-            }]
-        }))
-        .pipe(gulp.dest('.'));
-});
+}, {read:false});
 
-gulp.task('nuget', ['nuspec'], function () {
-    return nuget
-        .pack({
-            spec: 'Otp.NET.nuspec',
-            outputDirectory: 'src/Otp.NET/bin/Release',
-            version: p.version
-        });
-});
+gulp.task('build', ['restore'], ()=>{
+
+    return gulp.src('**/*.sln')
+               .pipe(build({
+                   configuration: configuration
+               }));
+
+}, {read:false});
+
+gulp.task('test', ['build'], ()=>{
+
+    return gulp.src('**/*UnitTests.csproj')
+               .pipe(test({
+                   configuration: configuration,
+                   noBuild: true
+                }));
+                
+}, {read:false});
+
+gulp.task('nuget', ['build'], ()=>{
+
+    return gulp.src('src/Otp.NET/Otp.NET.csproj')
+               .pipe(pack({
+                   version: p.version,
+                   configuration: configuration
+               }));
+
+}, {read:false});
+
+gulp.task('push', ['nuget'], ()=>{
+
+    return gulp.src('**/*.nupkg')
+               .pipe(push({
+                   apiKey: process.env.NUGET_API_KEY
+               }));
+
+}, {read:false});

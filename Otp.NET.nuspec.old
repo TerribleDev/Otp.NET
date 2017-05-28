@@ -10,6 +10,7 @@
     <summary>An implementation of TOTP which is commonly used for multi factor authentication.</summary>
     <tags>otp totp 2fa two factor</tags>
     <iconUrl>http://i.imgur.com/XFfC64v.png</iconUrl>
+
   </metadata>
   <files>
     <file src="src\Otp.NET\bin\Release\net45\Otp.NET.dll" target="lib\net45"/>
